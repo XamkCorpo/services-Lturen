@@ -75,7 +75,7 @@ Selitä omin sanoin mitä DI-kontti tekee kun HTTP-pyyntö saapuu ja `ProductsCo
 
 Mitä tapahtuu jos unohdat rekisteröidä `IProductService`:n `Program.cs`:ssä? Milloin virhe ilmenee ja miltä se näyttää?
 
-**Vastaus:**
+**Vastaus: Di kontti ei osaa reitittää.**
 
 ---
 
@@ -94,7 +94,7 @@ Mitä tapahtuu jos unohdat rekisteröidä `IProductService`:n `Program.cs`:ssä?
 
 Mikä on `IProductService`:n ja `IProductRepository`:n välinen ero? Mitä tietotyyppejä kumpikin käsittelee (DTO vai Entity)?
 
-**IProductService:**
+**IProductService: Käsittelee pyyntöä **
 
 **IProductRepository:**
 
