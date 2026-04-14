@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using ProductApi.Common;
 using ProductApi.Mappings;
 using ProductApi.Models;
 using ProductApi.Models.Dtos;
@@ -9,45 +11,97 @@ namespace ProductApi.Services;
 public class ProductService : IProductService
 {
     private readonly IProductRepository _repository;
+    private readonly ILogger<ProductService> _logger;
 
-    public ProductService(IProductRepository repository)
+    public ProductService(IProductRepository repository, ILogger<ProductService> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
 
-    public async Task<List<ProductResponse>> GetAllAsync()
+    public async Task<Result<List<ProductResponse>>> GetAllAsync()
     {
-        List<Product> products = await _repository.GetAllAsync();
-        return products.Select(p => p.ToResponse()).ToList();
+        try
+        {
+            List<Product> products = await _repository.GetAllAsync();
+            List<ProductResponse> response = products.Select(p => p.ToResponse()).ToList();
+            return Result.Success(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Virhe tuotteiden haussa");
+            return Result.Failure<List<ProductResponse>>("Tuotteiden haku epäonnistui");
+        }
     }
 
-    public async Task<ProductResponse?> GetByIdAsync(int id)
+    public async Task<Result<ProductResponse>> GetByIdAsync(int id)
     {
-        Product? product = await _repository.GetByIdAsync(id);
-        return product?.ToResponse();
+        try
+        {
+            Product? product = await _repository.GetByIdAsync(id);
+
+            if (product == null)
+                return Result.Failure<ProductResponse>($"Tuotetta {id} ei löytynyt");
+
+            return Result.Success(product.ToResponse());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Virhe tuotteen haussa: {ProductId}", id);
+            return Result.Failure<ProductResponse>("Tuotteen haku epäonnistui");
+        }
     }
 
-    public async Task<ProductResponse> CreateAsync(CreateProductRequest request)
+    public async Task<Result<ProductResponse>> CreateAsync(CreateProductRequest request)
     {
-        Product product = request.ToEntity();
-        Product created = await _repository.AddAsync(product);
-        return created.ToResponse();
+        try
+        {
+            Product product = request.ToEntity();
+            Product created = await _repository.AddAsync(product);
+            return Result.Success(created.ToResponse());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Virhe tuotteen luomisessa: {ProductName}", request.Name);
+            return Result.Failure<ProductResponse>("Tuotteen luominen epäonnistui");
+        }
     }
 
-    public async Task<ProductResponse?> UpdateAsync(int id, UpdateProductRequest request)
+    public async Task<Result<ProductResponse>> UpdateAsync(int id, UpdateProductRequest request)
     {
-        Product? existing = await _repository.GetByIdAsync(id);
+        try
+        {
+            Product? existing = await _repository.GetByIdAsync(id);
 
-        if (existing == null)
-            return null;
+            if (existing == null)
+                return Result.Failure<ProductResponse>($"Tuotetta {id} ei löytynyt");
 
-        request.UpdateEntity(existing);
-        await _repository.UpdateAsync(existing);
-        return existing.ToResponse();
+            request.UpdateEntity(existing);
+            await _repository.UpdateAsync(existing);
+            return Result.Success(existing.ToResponse());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Virhe tuotteen päivittämisessä: {ProductId}", id);
+            return Result.Failure<ProductResponse>("Tuotteen päivittäminen epäonnistui");
+        }
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<Result> DeleteAsync(int id)
     {
-        return await _repository.DeleteAsync(id);
+        try
+        {
+            bool deleted = await _repository.DeleteAsync(id);
+
+            if (!deleted)
+                return Result.Failure($"Tuotetta {id} ei löytynyt");
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Virhe tuotteen poistamisessa: {ProductId}", id);
+            return Result.Failure("Tuotteen poistaminen epäonnistui");
+        }
     }
 }
